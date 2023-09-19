@@ -1,0 +1,247 @@
+---
+title: "Macrophages LPS estimulation genelists. 5x10-2 pval"
+output:
+  html_document:
+  df_print: paged
+---
+
+# Info about the files
+
+
+This analysis uses the Supplementary data from Panousis et al (2023), that can be found in https://www.biorxiv.org/content/10.1101/2023.05.29.542425v1.supplementary-material.
+In Suppl table 1 there is some technical information. 
+Suppl table 2 has the data of the stimulation at 6h and Suppl. table 3 at 24h.
+For this analysis I first created csv files for each stimuli and timepoint that are used as input.
+
+
+```{r}
+library("EnsDb.Hsapiens.v86")
+library(UpSetR)
+library(gplots)
+library(VennDiagram)
+```
+
+# Predefined functions
+
+## Display Venn Diagram
+```{r}
+# Helper function to display Venn diagram
+display_venn <- function(x, ...){
+  grid.newpage()
+  venn_object <- venn.diagram(x, disable.logging = FALSE,
+                              filename = NULL, ...)
+  grid.draw(venn_object)
+}
+```
+
+
+## GeneID converter
+```{r}
+geneID_converter <- function(goi)
+  {
+  #goi <- AGGlps_Mac7_Mlps_LR$gene
+  ens_df <- ensembldb::select(EnsDb.Hsapiens.v86, keys= goi, 
+                              keytype = "SYMBOL", 
+                              columns = c("SYMBOL","GENEID"))
+  ens_df <- ens_df$GENEID[grepl(pattern = "^ENS", x = ens_df$GENEID)]
+  return(ens_df)
+  }
+```
+
+## Read and filter input
+```{r}
+read_DE_list <- function(infile)
+{ 
+  df <- read.csv(file = infile,sep = ";")
+  df <- df[df$log2FoldChange>1, ]
+  df <- df[df$padj < 0.05, ]  
+  df <- df[order(df$log2FoldChange, decreasing = T),]
+  df <- df[complete.cases(df), ]
+  #ENS_ID <- geneID_converter(df$hgnc)
+  #return(ENS_ID)
+  return(df)
+}
+```
+
+
+## Write output lists 
+```{r}
+out_folder <- "./Output_lists/pval5x10-2_sorted/"
+get_DE_set_lists <- function(after6h, after24h, stimuli_name)
+{
+  early <- setdiff(after6h$hgnc, after24h$hgnc)
+  inter <- intersect(after6h$hgnc, after24h$hgnc)
+  late  <- setdiff(after24h$hgnc, after6h$hgnc)
+
+  Early_genes <<- rbind(Early_genes, after6h[after6h$hgnc%in%early, ])
+  Inter_genes <<- rbind(Inter_genes, after6h[after6h$hgnc%in%inter, ],
+                        after24h[after24h$hgnc%in%inter, ])
+  Late_genes  <<- rbind(Late_genes, after24h[after24h$hgnc%in%late, ])
+  
+#  write(x = early, file = paste0(out_folder,stimuli_name,"sorted_early.txt"))
+#  write(x = inter, file = paste0(out_folder,stimuli_name,"sorted_inter.txt"))
+#  write(x = late,  file = paste0(out_folder,stimuli_name,"sorted_late.txt"))
+}
+```
+
+# Lists for Early, Inter and Late
+
+```{r}
+df_colnames <- c("hgnc","Gene","baseMean","log2FoldChange",
+                 "lfcSE","stat","pvalue","padj")
+Early_genes <- as.data.frame(matrix(data = NA, nrow = 0, ncol = 8))
+colnames(Early_genes) <- df_colnames
+Inter_genes <- Early_genes
+Late_genes  <- Early_genes
+```
+
+
+# Stimuli 
+
+## IFNB: Interferon beta, anti-inflammatory macrophages
+
+```{r, fig.width=4, fig.height=4}
+IFNB_6hrs <- read_DE_list("Stimuli_lists/Ctrl_vs_IFNB (6 hours).csv")
+IFNB_24hrs <- read_DE_list("Stimuli_lists/Ctrl_vs_IFNB (24 hours).csv")
+display_venn(list(IFNB_6hrs = IFNB_6hrs$hgnc, IFNB_24hrs= IFNB_24hrs$hgnc), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = IFNB_6hrs, after24h = IFNB_24hrs, stimuli_name = "IFNB")
+```
+
+##  IFNG: Interferon gamma, pro-inflammatory macrophages
+
+```{r, fig.width=4, fig.height=4}
+IFNG_6hrs <- read_DE_list("Stimuli_lists/Ctrl_vs_IFNG (6 hours).csv")
+IFNG_24hrs <- read_DE_list("Stimuli_lists/Ctrl_vs_IFNG (24 hours).csv")
+
+display_venn(list(IFNG_6hrs = IFNG_6hrs$hgnc, IFNG_24hrs= IFNG_24hrs$hgnc), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = IFNG_6hrs, after24h = IFNG_24hrs, stimuli_name = "IFNG")
+```
+## IL4: interleukin 4, anti-inflammatory macrophages
+
+```{r, fig.width=4, fig.height=4}
+IL4_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_IL4 (6 hours).csv")
+IL4_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_IL4 (24 hours).csv")
+
+display_venn(list( IL4_6hrs=IL4_6hrs$hgnc ,IL4_24hrs = IL4_24hrs$hgnc), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = IL4_6hrs, after24h = IL4_24hrs, stimuli_name = "IL4")
+```
+## R484: resquimoid, TLR 7/8 agonist
+
+```{r, fig.width=4, fig.height=4}
+R484_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_R848 (6 hours).csv")
+R484_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_R848 (24 hours).csv")
+
+display_venn(list(R484_6hrs =R484_6hrs$hgnc ,R484_24hrs =R484_24hrs$hgnc ), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h =R484_6hrs , after24h = R484_24hrs, stimuli_name = "R484")
+```
+
+## PIC: poly I:C, similar to dsRNA, mimics exposure to viruses
+
+
+```{r, fig.width=4, fig.height=4}
+PIC_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_PIC (6 hours).csv")
+PIC_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_PIC (24 hours).csv")
+
+display_venn(list(PIC_6hrs =PIC_6hrs$hgnc ,PIC_24hrs = PIC_24hrs$hgnc), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = PIC_6hrs, after24h = PIC_24hrs, stimuli_name = "PIC")
+```
+
+
+## sLPS: Salmonella typhimurium lipopolysaccharide, pro-inflammatory macrophages
+
+```{r, fig.width=4, fig.height=4}
+sLPS_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_sLPS (6 hours).csv")
+sLPS_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_sLPS (24 hours).csv")
+
+display_venn(list(sLPS_6hrs =sLPS_6hrs$hgnc , sLPS_24hrs= sLPS_24hrs$hgnc), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = sLPS_6hrs, after24h = sLPS_24hrs, stimuli_name = "sLPS")
+```
+
+## P3C: Pam3CSK4, Pam3CysSerLys4 TLR1/2 agonist
+
+```{r, fig.width=4, fig.height=4}
+P3C_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_P3C (6 hours).csv")
+P3C_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_P3C (24 hours).csv")
+
+display_venn(list(P3C_6hrs =P3C_6hrs$hgnc , P3C_24hrs=P3C_24hrs$hgnc ), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = P3C_6hrs, after24h = P3C_24hrs, stimuli_name = "P3C")
+```
+
+
+## CIL: CD40 ligand and IFNγ + sLPS
+
+```{r, fig.width=4, fig.height=4}
+CIL_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_CIL (6 hours).csv")
+CIL_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_CIL (24 hours).csv")
+
+display_venn(list( CIL_6hrs= CIL_6hrs$hgnc, CIL_24hrs= CIL_24hrs$hgnc), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = CIL_6hrs, after24h = CIL_24hrs, stimuli_name = "CIL")
+```
+
+
+## LIL10: interleukin 10 + LPS, anti-inflamatory effect of IL10 in LPS stimulated cells
+
+```{r, fig.width=4, fig.height=4}
+LIL10_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_LIL10 (6 hours).csv")
+LIL10_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_LIL10 (24 hours).csv")
+
+display_venn(list(LIL10_6hrs =LIL10_6hrs$hgnc ,LIL10_24hrs =LIL10_24hrs$hgnc ), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = LIL10_6hrs, after24h = LIL10_24hrs, stimuli_name = "LIL10")
+```
+## MBP: Myelin basic protein, damage induced by multiple sclerosis
+
+```{r, fig.width=4, fig.height=4}
+MBP_6hrs = read_DE_list("Stimuli_lists/Ctrl_vs_MBP (6 hours).csv")
+MBP_24hrs = read_DE_list("Stimuli_lists/Ctrl_vs_MPB (24 hours).csv")
+
+display_venn(list(MBP_6hrs =MBP_6hrs$hgnc ,MBP_24hrs = MBP_24hrs$hgnc), 
+             fill = c("tomato", "seagreen" ))
+get_DE_set_lists(after6h = MBP_6hrs, after24h = MBP_24hrs, stimuli_name = "MBP")
+```
+
+
+# Final lists 
+
+```{r, eval=TRUE}
+Early_genes <- Early_genes[order(Early_genes$log2FoldChange, decreasing = TRUE), ]
+Inter_genes <- Inter_genes[order(Inter_genes$log2FoldChange, decreasing = TRUE), ]
+Late_genes  <- Late_genes[order(Late_genes$log2FoldChange, decreasing = TRUE), ]
+
+Early_genes_unique <- Early_genes[!duplicated(Early_genes$hgnc), ]
+Inter_genes_unique <- Inter_genes[!duplicated(Inter_genes$hgnc), ]
+Late_genes_unique  <- Late_genes[!duplicated(Late_genes$hgnc), ]
+
+Early_genes_ENS <- geneID_converter(Early_genes_unique$hgnc)
+Inter_genes_ENS <- geneID_converter(Inter_genes_unique$hgnc)
+Late_genes_ENS  <- geneID_converter(Late_genes_unique$hgnc)
+```
+
+
+```{r, eval=FALSE}
+write(x = Early_genes_ENS, file = paste0(out_folder,"Early_genes_sorted.txt"))
+write(x = Inter_genes_ENS, file = paste0(out_folder,"Inter_genes_sorted.txt"))
+write(x = Late_genes_ENS,  file = paste0(out_folder,"Late_genes_sorted.txt"))
+
+```
+
+
+```{r}
+
+display_venn(list(early = Early_genes_ENS ,inter = Inter_genes_ENS, late= Late_genes_ENS), 
+             fill = c("tomato", "seagreen", "blue" ))
+```
+
+```{r}
+sessionInfo()
+
+```
+
