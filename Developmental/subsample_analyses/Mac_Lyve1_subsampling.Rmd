@@ -1,0 +1,144 @@
+---
+title: "MAC LYVE1 downsampling"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(ggplot2)
+library(stringr)
+library(dplyr)
+library(reshape2)
+library(ggforce)
+```
+
+## ALL samples
+
+```{r}
+samples <- read.csv(file = "subsampling_cells_100/subsampling_cells_100.txt")
+
+samples$rep <- NA
+
+for (i in 1:nrow(samples))
+  {
+  samples$rep[i] <- paste0("sample_", str_split(samples$cell[i], pattern = "_")[[1]][8])  
+  }
+
+samples$perc_sample <- samples$n_sample * 100
+samples$perc_sample <- as.factor(samples$perc_sample)
+  
+samples$n_sample <- as.factor(samples$n_sample)
+
+
+# samples_subset <- samples[ , c("rep", "n_sample", "α" )]
+# df <- melt(samples_subset, id.vars = c("rep", "n_sample") )
+samples_subset <- samples[ , c("rep", "perc_sample", "α" )]
+df <- melt(samples_subset, id.vars = c("rep", "perc_sample") )
+
+
+# lm.results <- lm(formula = n_sample~value, data = df )
+# summary(lm.results)
+# # grouped boxplot
+# ggplot(df, aes(x=n_sample, y=value, group=n_sample)) + 
+#   geom_point() 
+
+
+
+
+```
+
+
+
+```{r, eval=FALSE}
+ggplot(df, aes(x=n_sample, y=value, color=n_sample))+
+  geom_violin()+ 
+  #geom_jitter(aes(group=n_sample)) + 
+  geom_sina()+
+  stat_summary(fun="mean",geom="crossbar", mapping=aes(ymin=..y.., ymax=..y..), 
+     width=1, position=position_dodge(),show.legend = FALSE) +
+  ylim(0, 0.5)
+
+```
+
+```{r, fig.height=5, fig.height=5}
+
+## calculate the mean per group
+DataMean <- df %>% 
+  group_by(perc_sample) %>%
+  summarize(mean = mean(value))
+
+## calculate the mean per group
+DataSD <- df %>% 
+  group_by(perc_sample) %>%
+  summarize(sd = sd(value))
+
+
+## calculate the variance per group
+DataVAR <- df %>% 
+  group_by(perc_sample) %>%
+  summarize(Variance = var(value))
+
+
+
+
+vlnplt <- ggplot(df, aes(x=perc_sample, y=value, color=perc_sample))+
+  geom_violin()+ 
+  #geom_jitter(aes(group=n_sample)) + 
+  geom_sina(size= 0.5)+
+  stat_summary(fun="mean",geom="crossbar", mapping=aes(ymin=..y.., ymax=..y..), 
+     width=1, position=position_dodge(),show.legend = FALSE) +
+  ylim(0, 0.5) +
+  labs(#title = "Macro Lyve1 cell sampling (N = 100 per sample size)", 
+    y = "Alpha", x = "Sample size (%)", color = "Sample size\n (%)") +
+  #      geom_line(aes( x, y, linetype = cutoff ), cutoff)
+  geom_hline(yintercept = 0.365, col = "gray50", show.legend = TRUE, linewidth= 1.2, linetype = 5) +
+  annotate("text", x = "5", y = 0.365, label = "Original sample\n value", vjust = -0.5) 
+
+vlnplt
+```
+
+```{r}
+# Load
+#library("ggExtra")
+varplot <- ggplot(data = DataVAR, aes(x = perc_sample, y = Variance, fill=perc_sample )) +
+  geom_bar(stat = "identity") +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) + 
+  labs(title = "Macro Lyve1 cell sampling (N = 100 per sample size)", fill = "Sample size\n (%)") + 
+  scale_y_continuous(breaks = seq(0, 0.002, by = 0.001))
+
+varplot
+```
+
+```{r}
+library(gridExtra)
+grid.arrange(varplot, vlnplt, ncol= 1,  heights=c(1, 4))
+
+```
+
+```{r}
+library(gridExtra)
+library(cowplot)
+
+plot_grid(varplot, vlnplt, align = "v", ncol = 1, rel_heights = c(1/4, 3/4))
+```
+
+
+```{r, eval=FALSE}
+png(filename = "./Mac_Lyve1_donsampling.png", 
+    width = 9, height = 6,units = "in",res = 300)
+plot_grid(varplot, vlnplt, align = "v", ncol = 1, rel_heights = c(1/4, 3/4))
+dev.off
+```
+
+
+```{r, eval=FALSE}
+svg(filename = "./Mac_Lyve1_donsampling.svg",
+    width = 9, height = 6)
+plot_grid(varplot, vlnplt, align = "v", ncol = 1, rel_heights = c(1/4, 3/4))
+dev.off
+```
+
+
