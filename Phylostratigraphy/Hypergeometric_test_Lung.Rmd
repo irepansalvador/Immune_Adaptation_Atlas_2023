@@ -1,0 +1,234 @@
+---
+title:  "PS enrichment Lung atlas. HyperGeometric test"
+author: "Irepan Salvador-Martinez"
+date: "5/03/2024"
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+---
+
+Here I take the top 500 DE genes for each celltype (same we used for estimating
+alpha) and test if these genes are enriched with a specific Phylostrata.
+
+For this I used the dataset from Litman and Stein where they asign a PS value
+to all human genes using the median/mean PS value of different datasets
+
+
+
+```{r}
+library(gplots)
+library(RColorBrewer)
+library(scico)
+library(reshape2)
+library(ggplot2)
+
+```
+
+
+```{r}
+
+process_data <- function(data, lineage) {
+  df <- melt(data)
+  colnames(df) <- c("celltype", "Phylostrata", "pval")
+  df$celltype <- stringr::str_remove_all(df$celltype, "_FULL_ENSEMBL.txt")
+  df$pval[df$pval < 1e-9 ] = 1e-9  
+  df$lineage <- lineage
+  return(df)
+}
+
+
+plot_HM <- function(data, title)
+{
+  ggplot(data, aes(x = Phylostrata, y = celltype, fill = pval)) +
+  geom_tile() +
+  colorspace::scale_fill_continuous_divergingx(
+    limits = c(1e-9, 1),
+    breaks=c(1e-9, 1e-6, 1e-3, 1),
+    trans = "log10",
+    name = "p-value",
+    mid = log10(0.001),
+    palette = "ArmyRose"
+  ) +
+  theme_classic() + ggtitle(title) +
+  scale_x_continuous("Phylostrata", c(1:19) ) +
+  scale_y_discrete("celltype")
+}
+
+
+
+```
+
+
+
+
+
+
+```{r}
+metadata <- read.csv(file = "Human_Gene_Ages.csv")
+
+Gene_ages <- metadata[,c(1,7)]
+
+Gene_ages$Gene_age <- as.factor(Gene_ages$Gene_age)
+plot(table(Gene_ages$Gene_age), type = "line")
+
+```
+
+# ALL PHYLOSTRATA
+
+## Tcells
+
+```{r}
+in_dir <- "../Lung/ENS_FULL_genelists_wilcox/Tcells/"
+files <- list.files(path = in_dir, pattern = "*.txt")
+N <- length(Gene_ages$Gene_age)
+N_PS <- table(Gene_ages$Gene_age)
+
+Hyper_test_Tcells <- matrix(data = NA, nrow = length(files), ncol = length(N_PS),
+                     dimnames = list(files,1:length(N_PS)) )
+Tcells_mean_Age <-  data.frame(celltype = files, Mean_Age = NA )
+
+for (i in files) {
+  print(i)
+  goi <- read.csv(file = paste0(in_dir, i))
+  goi <- goi[, 1]
+  if (length(goi) > 500) {goi <- goi[1:500] } # top 500
+
+  ages <- Gene_ages[which(Gene_ages$Gene_id %in% goi), ]
+  #if (length(ages$Gene_id) > 500) {ages <- ages[1:500,] } # top 500
+  n <- length(ages$Gene_age)
+  n_ps <- table(ages$Gene_age)
+  Tcells_mean_Age$Mean_Age[Tcells_mean_Age$celltype == i] <- mean(as.numeric(ages$Gene_age))
+  
+  for (j in 1:length(N_PS)) {
+    #j <- 1
+    # q number of genes of a PS in a sample
+    # m the number of genes of a PS in the pop
+    # n the number of genes in the population that are not of a PS
+    # k the number genes in the sample (all PS)
+    pval <- phyper(q = n_ps[j]-1, m = N_PS[j], n = N - N_PS[j], k = n,
+                   lower.tail = FALSE)
+    Hyper_test_Tcells[i,j] <- pval  
+  }
+}
+```
+
+
+```{r}
+Tcells <- process_data(Hyper_test_Tcells, "Tcells")
+plot_HM(Tcells, "Tcells")
+```
+
+
+
+## Bcells
+
+```{r}
+in_dir <- "../Lung/ENS_FULL_genelists_wilcox/Bcells/"
+files <- list.files(path = in_dir, pattern = "*.txt")
+N <- length(Gene_ages$Gene_age)
+N_PS <- table(Gene_ages$Gene_age)
+
+Hyper_test_Bcells <- matrix(data = NA, nrow = length(files), ncol = length(N_PS),
+                     dimnames = list(files,1:length(N_PS)) )
+Bcells_mean_Age <-  data.frame(celltype = files, Mean_Age = NA )
+
+for (i in files) {
+  print(i)
+  goi <- read.csv(file = paste0(in_dir, i))
+  goi <- goi[, 1]
+  if (length(goi) > 500) {goi <- goi[1:500] } # top 500
+  
+  ages <- Gene_ages[which(Gene_ages$Gene_id %in% goi), ]
+  #if (length(ages$Gene_id) > 500) {ages <- ages[1:500,] } # top 500
+  n <- length(ages$Gene_age)
+  n_ps <- table(ages$Gene_age)
+  Bcells_mean_Age$Mean_Age[Bcells_mean_Age$celltype == i] <- mean(as.numeric(ages$Gene_age))
+  
+  for (j in 1:length(N_PS)) {
+    #j <- 1
+    # q number of genes of a PS in a sample
+    # m the number of genes of a PS in the pop
+    # n the number of genes in the population that are not of a PS
+    # k the number genes in the sample (all PS)
+    pval <- phyper(q = n_ps[j]-1, m = N_PS[j], n = N - N_PS[j], k = n,
+                   lower.tail = FALSE)
+    Hyper_test_Bcells[i,j] <- pval  
+  }
+}
+```
+
+
+```{r}
+Bcells <- process_data(Hyper_test_Bcells, "Bcells")
+plot_HM(Bcells, "Bcells")
+```
+
+
+
+## Myeloid
+
+```{r}
+in_dir <- "../Lung/ENS_FULL_genelists_wilcox/Myeloid/"
+files <- list.files(path = in_dir, pattern = "*.txt")
+N <- length(Gene_ages$Gene_age)
+N_PS <- table(Gene_ages$Gene_age)
+
+Hyper_test_Myeloid <- matrix(data = NA, nrow = length(files), ncol = length(N_PS),
+                     dimnames = list(files,1:length(N_PS)) )
+Myeloid_mean_Age <-  data.frame(celltype = files, Mean_Age = NA )
+
+for (i in files) {
+  print(i)
+  goi <- read.csv(file = paste0(in_dir, i))
+  goi <- goi[, 1]
+  if (length(goi) > 500) {goi <- goi[1:500] } # top 500
+  
+  ages <- Gene_ages[which(Gene_ages$Gene_id %in% goi), ]
+  #if (length(ages$Gene_id) > 500) {ages <- ages[1:500,] } # top 500
+  n <- length(ages$Gene_age)
+  n_ps <- table(ages$Gene_age)
+  Myeloid_mean_Age$Mean_Age[Myeloid_mean_Age$celltype == i] <- mean(as.numeric(ages$Gene_age))
+  
+  for (j in 1:length(N_PS)) {
+    #j <- 1
+    # q number of genes of a PS in a sample
+    # m the number of genes of a PS in the pop
+    # n the number of genes in the population that are not of a PS
+    # k the number genes in the sample (all PS)
+    pval <- phyper(q = n_ps[j]-1, m = N_PS[j], n = N - N_PS[j], k = n,
+                   lower.tail = FALSE)
+    Hyper_test_Myeloid[i,j] <- pval  
+  }
+}
+```
+
+
+
+```{r}
+Myeloid <- process_data(Hyper_test_Myeloid, "Myeloid")
+plot_HM(Myeloid, "Myeloid")
+```
+
+
+```{r}
+All_celltypes <- rbind(Tcells, Bcells, Myeloid)
+All_celltypes$celltype <- factor(All_celltypes$celltype, levels = unique(All_celltypes$celltype))
+plot_HM(All_celltypes, "Lung Atlas")
+```
+
+
+
+## export mean ages tables
+
+```{r, eval=FALSE}
+write.csv(Tcells_mean_Age, file = "./Mean_Ages/Tcells_Lung_mean_Age.csv")
+write.csv(Bcells_mean_Age, file = "./Mean_Ages/Bcells_Lung_mean_Age.csv")
+write.csv(Myeloid_mean_Age, file = "./Mean_Ages/Myeloid_Lung_mean_Age.csv")
+```
+
+
+```{r}
+sessionInfo()
+```
+
