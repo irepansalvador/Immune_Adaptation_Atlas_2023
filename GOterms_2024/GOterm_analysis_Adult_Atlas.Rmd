@@ -1,0 +1,115 @@
+---
+title: "GO term analysis. Adult Atlas"
+output: html_notebook
+---
+
+# Packages
+
+```{r}
+library("EnsDb.Hsapiens.v86")
+library(biomaRt)
+library(ggplot2)
+library(org.Hs.eg.db)
+library(GO.db)
+library(stringr)
+library(clusterProfiler)
+library(AnnotationDbi)
+library(enrichplot)
+library(ggnewscale)
+library(xlsx)
+library(stringr)
+
+columns(org.Hs.eg.db)
+
+```
+
+
+# IO
+
+```{r}
+#in_path <- "~/Desktop/Github/Immune_Adaptation_Atlas_2023/Adult/DE_genelists_log2FC/"
+#in_path <- "~/Desktop/Github/Immune_Adaptation_Atlas_2023/immune_gene_list/adult_outputs/"
+in_path <- "~/Desktop/Github/Immune_Adaptation_Atlas_2023/results_2024/cases/adult/"
+```
+
+
+## Goterm enrichment function
+
+```{r}
+GO_cell_types_ALL <- function( all_cells, sig_cells) {
+  cont = 0
+  out_path <- "./Adult/plots/"
+  for (g in all_cells)
+  {
+    #g = "Bcells_GC_B_I"
+    print(g)
+    de <- read.table(file = paste0(in_path,g,"_case.txt" ),
+                     header = F)[,1]
+    # DE genes (500 at most)
+    if (length(de)>500) {de <- de[1:500]}
+    #de <- compartment_df[, g]
+    #de <- de[de != ""]
+    # RUN GOterm analysis
+    GO_res <- enrichGO(gene = de, 
+                       OrgDb = "org.Hs.eg.db", 
+                       keyType = "ENSEMBL", ont = "BP")
+    df <- as.data.frame(GO_res)
+    if (dim(df)[1] > 0)
+      {
+      cont = cont + 1 
+     # GO_resX <- setReadable(GO_res, 'org.Hs.eg.db', 'ENSEMBL')
+      GO_res2 <- pairwise_termsim(GO_res)
+      # export as excel
+      file <- paste0("Adult/GO_term_enrichment_BP.xlsx")
+      if (cont == 1) {write.xlsx(df, file, sheetName=g, col.names=TRUE,
+                          row.names=FALSE, append=FALSE)
+        } else {write.xlsx(df, file, sheetName=g, col.names=TRUE,
+                          row.names=FALSE, append=TRUE) }
+      if (g %in% sig_cells) {
+        # plot image and export
+       # p1 <- treeplot(GO_res2, showCategory = 30, offset = 2)
+        p1 <- treeplot(GO_res2, offset = 4,showCategory = 30, fontsize = 3, nWords = 4)
+        png(filename = paste0(out_path, g, ".png"), res = 300, units = "in", 
+            height = 9,  width = 12 )
+        plot(p1)
+        dev.off()      
+      }
+    }
+  }
+}
+
+```
+
+
+
+
+
+## ALL cells
+
+
+```{r}
+all_files <- list.files(path = in_path)
+#Tcells_files <- all_files[str_detect(string = all_files, pattern = "Tcells")]
+all_files <- all_files[str_detect(string = all_files, pattern = "case.txt")]
+
+All_CT <- vector()
+for (i in 1:length(all_files))
+{
+#  i <- 1
+  x <- str_remove(string = all_files[i], pattern = "_case.txt")
+  All_CT <- c(All_CT, x)
+}
+
+```
+
+```{r}
+all_cells <- All_CT
+sig_cells <-  c("Tcells_Trm_em_CD8", "Tcells_Trm_Th1_Th17",
+                "Tcells_NK_CD56bright_CD16-","Myeloid_DC1")
+
+GO_cell_types_ALL(all_cells = all_cells, sig_cells = sig_cells)
+
+
+```
+
+
