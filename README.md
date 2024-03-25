@@ -15,6 +15,13 @@ We provide Jupyter notebooks to obtain, for each adult compartment, the list of 
 The annotated data for each compartment was downloaded in the AnnData format from https://www.tissueimmunecellatlas.org/.
 We used the Python scanpy package to read and process the h5ad file.
 
+## Lung 
+
+We provide Jupyter notebooks to obtain, for each adult compartment, the list of Differentially expressed genes for each cell type.
+The annotated data for each compartment was downloaded in the AnnData format from https://5locationslung.cellgeni.sanger.ac.uk/.
+We used the Python scanpy package to read and process the h5ad file.
+We also provide the script to produce the heatmap with the spatial loadings based on the deconvolution of the Spatial transcriptomics data.
+
 ## Macrophages
 
 Macrophage activation DE genes were obtained from the preprint by Panousis et al (2023), available in https://doi.org/10.1101/2023.05.29.542425 as Supplementary material.
@@ -24,3 +31,7 @@ For each stimulus, we further categorised the genes as “early” (found exclus
 ## Phylostratigraphy
 
 We obtained the Phylostrata (PS) values for human genes from the study of Litman and Stein (2019; https://doi.org/10.1053/j.seminoncol.2018.11.002), where the authors determine consensus ages for human protein-coding and noncoding genes, using publicly available databases. Based on the data provided by Litman and Stein, we generated the file "Human_Gene_Ages.csv" that contains PS values for 27,974 human genes. We provide Rmd files to run the PS enrichment test using a Hypergeometric test. The test was performed using the `phyper()` function of the R stats package.
+
+## GO_terms_2024
+
+We provide the scripts to perform GO term analyses using the Biological Process (BP) ontology for each set of DE genes used for the ABC-MK test, using the R packages cluster-Profiler (version 4.2.2), enrichplot (version 1.14.2), GO.db and org.Hs.eg.db (BioConductor version 3.14).
