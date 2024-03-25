@@ -1,0 +1,208 @@
+---
+title: "Lung Spatial location"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(ggplot2)
+library(dittoSeq)
+library(dplyr)
+library(reshape2)
+library(ComplexHeatmap)
+library(circlize)
+
+```
+
+```{r}
+ggplotColours <- function(n = 6, h = c(0, 360) + 15){
+  if ((diff(h) %% 360) < 1) h[2] <- h[2] - 360/n
+  hcl(h = (seq(h[1], h[2], length = n)), c = 100, l = 65)
+}
+```
+
+
+## Open saved dataframe
+
+```{r}
+Immune_cells <- c(
+  ## T cells
+  'CD4_naive_CM','CD8_EM',
+  'CD8_EM_EMRA', 'CD8_TRM', "T_reg",
+  'NK_CD16hi', 'NK_CD11d','NK_CD56bright',
+  ## B cells
+  'B_memory', 'B_plasma_IgA','B_plasmablast',
+  'B_naive', 'B_plasma_IgG',
+  ## Myeloid
+  'Macro_CHIT1', 'Macro_interstitial',
+  'DC_1', 'DC_plasmacytoid',
+  'Macro_alveolar_metallothioneins', 'Macro_alv',
+  'Macro_dividing', 'Macro_int', 'Macro_CCL',
+  'Megakaryocyte', 'Macrophage_intermediate',
+  'Monocyte_CD14', 'Monocyte_CD16',
+  'Macro_AW_CX3CR1', 'DC_2', 'DC_activated'
+  )
+
+
+```
+
+```{r}
+Immune_cells_SIG <- c(
+  ## SIG ###########
+  "CD8_TRM","T_reg",  'NK_CD16hi', 
+  #'NK_CD11d', 
+  'NK_CD56bright',
+  #-------------------
+  'B_naive', 'B_plasma_IgG',
+  #-------------------
+  'Macro_AW_CX3CR1', 'DC_2', 'DC_activated',
+  ## NS ###########
+  'CD8_EM_EMRA', 'CD8_EM','NK_CD11d','CD4_naive_CM',
+  #-------------------
+  'B_memory', 'B_plasma_IgA','B_plasmablast',
+  #-------------------
+  'Macro_CHIT1', 'Macro_interstitial',
+  'DC_1', 'DC_plasmacytoid',
+  #'Macro_alveolar_metallothioneins', 'Macro_dividing',  'Macro_CCL',   'Megakaryocyte', 
+  'Macro_alv',
+  'Macro_int',
+  'Macrophage_intermediate',
+  'Monocyte_CD14', 'Monocyte_CD16'
+  )
+
+
+```
+
+
+## Open saved dataframe
+
+This dataframe contains the signal from the different cell types inside each tissue
+(deconvolution with cell2location).
+The signal is normalised by Tissue.
+
+```{r}
+
+df <- read.csv("../Lung_abundance_norm_CELLTYPE.csv", row.names = 1)
+## by cell type
+df <- df[,1:15]
+
+head(apply(X = df, MARGIN = 1, FUN = sum))
+
+```
+
+
+```{r}
+#df_immune <- df[Immune_cells, ]
+df_immune <- df[Immune_cells_SIG, ]
+#apply(X = df_immune, MARGIN = 1, FUN = sum)
+```
+
+
+```{r}
+
+heatmap(as.matrix(df_immune), margins = c(10,5), Colv = NA)
+heatmap(as.matrix(df_immune), margins = c(10,5))
+```
+
+
+
+
+```{r}
+head(df_immune)
+df_immune_t <- as.data.frame(t(df_immune))
+df_immune_t$Tissue <- row.names(df_immune_t)
+```
+
+
+```{r}
+df_immune_t_melt <- melt(df_immune_t, id.vars = "Tissue", variable.name = "Cell_type" )
+head(df_immune_t_melt)
+
+#df_immune_t_melt$Cell_type <- factor(x = row.names(df_immune_t), labels = df_immune_t$Cell_type, ordered = TRUE)
+
+```
+
+```{r}
+
+# Stacked
+ggplot(df_immune_t_melt, aes(fill=Tissue, y=value, x=Cell_type)) + 
+    geom_bar(position="fill", stat="identity") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+    scale_fill_manual(values=ggplotColours(15))
+
+
+```
+### Complex heatmap
+
+
+```{r}
+Tissue_order <- c(
+  "Glands", 
+  "iBALT",
+  "Venous_vessel",
+  "Nerve", 
+  "Arterial_vessel",
+  "Airway_Smooth_Muscle",                             
+  "Perichondrium",
+  "Cartilage", "Weird_morphology",   
+    "Mesothelium",
+  "Tissue",
+  "Pulmonary_vessel",
+  "Parenchyma",
+"Small_airway","Multilayer_epithelium"
+)
+
+df_immune_2 <- df_immune[, Tissue_order]
+
+```
+
+### Add legends (pval and asterisk)
+
+```{r}
+alpha_vals <- read.csv(file = "~/Desktop/Github/Immune_Adaptation_Atlas_2023/results/lung/lung_top_500_orthologs_abcmk.txt")
+alpha_vals <- alpha_vals[alpha_vals$type == "case",]
+head(alpha_vals)
+rownames(alpha_vals) <- alpha_vals$cell
+
+AV_1 <-   alpha_vals[c("CD8_TRM_case.txt","T_reg_case.txt","NK_CD16hi_case.txt",
+           "NK_CD56bright_case.txt", "B_naive_case.txt", "B_plasma_IgG_case.txt",
+           "Macro_AW_CX3CR1_case.txt", "DC_2_case.txt", "DC_activated_case.txt", 
+           "CD8_EM_EMRA_case.txt", "CD8_EM_case.txt", "NK_CD11d_case.txt",
+           "CD4_naive_CM_case.txt", "B_memory_case.txt", "B_plasma_IgA_case.txt", 
+           "B_plasmablast_case.txt", "Macro_CHIT1_case.txt", "Macro_interstitial_case.txt",
+           "DC_1_case.txt", "DC_plasmacytoid_case.txt", "Macro_alveolar_case.txt",
+           "Macro_intravascular_case.txt", "Macro_intermediate_case.txt",
+           "Monocyte_CD14_case.txt", "Monocyte_CD16_case.txt"), ]$α
+
+pch = rep(NA, 29)
+pch[c(1:9)] = "*"
+
+```
+
+
+
+
+```{r, fig.width=9, fig.height=6}
+alpha_col_fun = colorRamp2(c(0, 0.5), c("white", "tomato2")) 
+col_fun = colorRamp2(c( 0, 0.1, 0.25, 0.4), c("grey100","steelblue3","steelblue4", "royalblue4"))
+
+ha = HeatmapAnnotation(
+    Alpha = anno_simple(AV_1,col = alpha_col_fun, pch = pch),
+    annotation_name_side = "left")
+
+ht = Heatmap(t(df_immune_2),col = col_fun, 
+        row_order = c(15:1), 
+        column_dend_reorder = c(rep(5,5),rep(2,5), rep(1,15)),
+        top_annotation =  ha)
+# see how we define the legend for pvalue
+lgd_pvalue = Legend(title = "Alpha", col_fun = alpha_col_fun, at = c(0, 0.25, 0.5), 
+    labels = c("0", "0.25", "0.5"))
+# and one for the significant p-values
+lgd_sig = Legend(title = "pval", pch = "*", type = "points", labels = "< 0.05")
+# these two self-defined legends are added to the plot by `annotation_legend_list`
+draw(ht, annotation_legend_list = list(lgd_pvalue, lgd_sig))
+
+
+```
+
