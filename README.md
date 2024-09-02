@@ -35,3 +35,11 @@ We obtained the Phylostrata (PS) values for human genes from the study of Litman
 ## GO_terms_2024
 
 We provide the scripts to perform GO term analyses using the Biological Process (BP) ontology for each set of DE genes used for the ABC-MK test, using the R packages cluster-Profiler (version 4.2.2), enrichplot (version 1.14.2), GO.db and org.Hs.eg.db (BioConductor version 3.14).
+
+## abcmk
+
+We provide the scripts to run progressive bootstrapping, ABC-MK inferences and FDR.
+
+## annotations
+
+Folder containing polymorphic data from 1000GP and human fixations from Human-Chimp-Gorilla-Orangutan orthologs alignemnts, Hg38 gene coordinates, mammals orthologs list and confounding factors to run progressive resampling.
